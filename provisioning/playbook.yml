@@ -1,0 +1,76 @@
+---
+- hosts: all
+  become: yes
+
+  vars_files:
+    - env.config.yml
+
+  pre_tasks:
+    - import_tasks: tasks/dev.config.yml
+      when: env == 'dev'
+    - name: Set the PHP webserver daemon correctly when nginx is in use.
+      set_fact:
+        php_webserver_daemon: nginx
+    - name: Ensure PHP version-specific workspace directory exists.
+      file:
+        path: "/root/php{{ php_version }}"
+        state: directory
+        mode: 0775
+
+  roles:
+    - { role: geerlingguy.nginx }
+    - { role: geerlingguy.php-versions, when: php_version != '' }
+    - { role: geerlingguy.php }
+    - { role: geerlingguy.php-pecl }
+    - { role: geerlingguy.composer }
+    - { role: geerlingguy.mysql }
+    - { role: geerlingguy.php-mysql }
+
+    - role: geerlingguy.php-xdebug
+      workspace: "/root/php{{ php_version }}"
+      when: '"xdebug" in installed_extras'
+
+    - role: geerlingguy.php-xhprof
+      workspace: "/root/php{{ php_version }}"
+      when: '"xhprof" in installed_extras'
+
+    - { role: geerlingguy.adminer, when: '"adminer" in installed_extras', tags: [ 'database' ] }
+    - { role: geerlingguy.nodejs, when: '"nodejs" in installed_extras' }
+
+  tasks:
+    - name: Allow all access to tcp port 80
+      ufw:
+        rule: allow
+        port: '80'
+        proto: tcp
+    - name: Change php-fpm username forcefully
+      replace:
+        path: /etc/php/8.1/fpm/pool.d/www.conf
+        regexp: 'www-data'
+        replace: 'vagrant'
+        backup: yes
+      when: env == 'dev'
+      notify:
+        - notify:Restart php
+    - name: Copy xdebug ini into main extension config folder.
+      template:
+        src: templates/xdebug.ini.j2
+        dest: "{{ item }}/{{ php_xdebug_config_filename }}"
+        owner: root
+        group: root
+        mode: 0644
+      when: "'cli' not in item or ('cli' in item and not php_xdebug_cli_disable)"
+      with_items: "{{ php_extension_conf_paths }}"
+      notify:
+        - restart webserver
+        - Restart php
+
+  handlers:
+    - name: Restart Nginx
+      service:
+        name: nginx
+        state: restarted
+    - name: Restart php
+      service:
+        name: php{{ php_version }}-fpm
+        state: restarted

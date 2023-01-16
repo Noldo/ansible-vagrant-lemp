@@ -1,0 +1,4 @@
+php_fpm_pool_user: vagrant
+php_fpm_pool_group: vagrant
+
+nginx_user: vagrant
