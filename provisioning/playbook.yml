@@ -51,7 +51,7 @@
         backup: yes
       when: env == 'dev'
       notify:
-        - notify:Restart php
+        - Restart php
     - name: Copy xdebug ini into main extension config folder.
       template:
         src: templates/xdebug.ini.j2

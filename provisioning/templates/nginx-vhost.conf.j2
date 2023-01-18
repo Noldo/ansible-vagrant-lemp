@@ -48,40 +48,20 @@ server {
     }
     {% endblock %}
 
-    {% block location_drupal_legacy -%}
-    {% if drupal_major_version >= 8 -%}
-    # Redirect common PHP files to their new locations.
-    location ~ ^((?!.*(?:core)).*)/(install.php|rebuild.php) {
-         return 301 $scheme://$host$1/core/$2$is_args$args;
-    }
-    {% endif %}
-    {% endblock %}
-
     {% block location_php -%}
     # Use fastcgi for all php files.
-    location ~ \.php$|^/update.php {
-        fastcgi_split_path_info ^(.+?\.php)(|/.*)$;
-        fastcgi_index index.php;
-        fastcgi_param SCRIPT_FILENAME $request_filename;
-        fastcgi_intercept_errors on;
-        fastcgi_read_timeout {{ php_max_execution_time }};
-        include fastcgi_params;
-        fastcgi_pass {{ php_fpm_listen }};
+    location ~ \.php$ {
+      fastcgi_split_path_info ^(.+\.php)(/.+)$;
+      fastcgi_pass unix:/var/run/php/php{{ php_version }}-fpm.sock;
+      fastcgi_index index.php;
+      fastcgi_param SCRIPT_FILENAME $request_filename;
+      include fastcgi_params;
     }
     {% endblock %}
 
     {% block location_rewrite -%}
     location @rewrite {
         rewrite ^ /index.php;
-    }
-    {% endblock %}
-
-    {% block location_image_styles -%}
-    location ~ ^/sites/.*/files/styles/ {
-        try_files $uri @rewrite;
-    }
-    location ~ ^(/[a-z\-]+)?/system/files/ {
-        try_files $uri /index.php?$query_string;
     }
     {% endblock %}
 
