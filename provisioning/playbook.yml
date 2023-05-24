@@ -62,7 +62,7 @@
       when: "'cli' not in item or ('cli' in item and not php_xdebug_cli_disable)"
       with_items: "{{ php_extension_conf_paths }}"
       notify:
-        - restart webserver
+        - Restart Nginx
         - Restart php
 
   handlers:
