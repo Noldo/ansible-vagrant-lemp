@@ -18,13 +18,6 @@ server {
     index {{ item.index | default('index.php index.html index.htm') }};
     {% endblock %}
 
-    {% block server_logs -%}
-    {%- if item.access_log is defined -%}
-    access_log {{ item.access_log }};
-    {%- endif -%}
-    error_log {{ item.error_log|default('/var/log/nginx/error.log') }} info;
-    {% endblock %}
-
 {% if item.is_php is defined and item.is_php %}
     {% block location_primary -%}
     location / {
